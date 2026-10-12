@@ -84,3 +84,8 @@ Export produces a versioned JSON object with `schemaVersion`, `exportedAt`, `inc
 - `lib/main.dart`: Flutter UI and navigation
 - `lib/models/incident.dart`: incident model and JSON/map conversion
 - `lib/services/app_database.dart`: SQLite schema, local accounts, incident CRUD, responder records, JSON export/import
+
+
+## Build log fix (October 2026)
+
+The `IncidentsScreen` and `RespondersScreen` implementations were reformatted and their mismatched parentheses/braces corrected after a release build reported Dart syntax errors. Run `flutter pub get` and `flutter build apk --release` again. This environment does not have the Flutter SDK installed, so the corrected source has not been compiled here.

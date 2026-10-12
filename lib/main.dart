@@ -96,13 +96,178 @@ class _SosScreenState extends State<SosScreen> {
 }
 
 class IncidentsScreen extends StatefulWidget { final String email; final ValueChanged<String> onTrack; const IncidentsScreen({super.key, required this.email, required this.onTrack}); @override State<IncidentsScreen> createState() => _IncidentsScreenState(); }
-class _IncidentsScreenState extends State<IncidentsScreen> { Future<List<Incident>> load() => AppDatabase.instance.incidents(email: widget.email); @override Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('Incident dashboard'), actions: [IconButton(tooltip: 'Export JSON', onPressed: () async { final json = await AppDatabase.instance.exportJson(); if (context.mounted) showDialog(context: context, builder: (_) => AlertDialog(title: const Text('Database JSON export'), content: SizedBox(width: 500, child: SingleChildScrollView(child: SelectableText(json))), actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))])); }, icon: const Icon(Icons.data_object))]), body: FutureBuilder<List<Incident>>(future: load(), builder: (context, snapshot) { if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator()); final items = snapshot.data ?? []; if (items.isEmpty) return const Center(child: Padding(padding: EdgeInsets.all(24), child: Text('No incidents saved yet. Submit an SOS report to see it here.', textAlign: TextAlign.center))); return RefreshIndicator(onRefresh: () async => setState(() {}), child: ListView(padding: const EdgeInsets.all(12), children: [Card(child: Padding(padding: const EdgeInsets.all(16), child: Text('${items.length} saved incident(s)', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)))), ...items.map((i) => Card(child: ListTile(leading: CircleAvatar(backgroundColor: i.category == 'Women' ? pink : blue, child: Icon(i.category == 'Women' ? Icons.shield : Icons.sos, color: Colors.white)), title: Text('${i.category} • ${i.emergencyType}', style: const TextStyle(fontWeight: FontWeight.bold)), subtitle: Text('${i.id}\n${i.status} • ${DateTime.tryParse(i.createdAt)?.toLocal().toString().split('.').first ?? i.createdAt}', maxLines: 3), isThreeLine: true, trailing: const Icon(Icons.chevron_right), onTap: () => widget.onTrack(i.id))))])); })) ; } }
+class _IncidentsScreenState extends State<IncidentsScreen> {
+  Future<List<Incident>> load() => AppDatabase.instance.incidents(email: widget.email);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Incident dashboard'),
+        actions: [
+          IconButton(
+            tooltip: 'Export JSON',
+            icon: const Icon(Icons.data_object),
+            onPressed: () async {
+              final json = await AppDatabase.instance.exportJson();
+              if (!context.mounted) return;
+              await showDialog<void>(
+                context: context,
+                builder: (dialogContext) => AlertDialog(
+                  title: const Text('Database JSON export'),
+                  content: SizedBox(
+                    width: 500,
+                    child: SingleChildScrollView(child: SelectableText(json)),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      child: const Text('Close'),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+      body: FutureBuilder<List<Incident>>(
+        future: load(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Could not load incidents: ${snapshot.error}'));
+          }
+          final items = snapshot.data ?? <Incident>[];
+          if (items.isEmpty) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: Text(
+                  'No incidents saved yet. Submit an SOS report to see it here.',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            );
+          }
+          return RefreshIndicator(
+            onRefresh: () async => setState(() {}),
+            child: ListView(
+              padding: const EdgeInsets.all(12),
+              children: [
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      '${items.length} saved incident(s)',
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+                ...items.map(
+                  (incident) => Card(
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: incident.category == 'Women' ? pink : blue,
+                        child: Icon(
+                          incident.category == 'Women' ? Icons.shield : Icons.sos,
+                          color: Colors.white,
+                        ),
+                      ),
+                      title: Text(
+                        '${incident.category} • ${incident.emergencyType}',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(
+                        '${incident.id}\n${incident.status} • ${DateTime.tryParse(incident.createdAt)?.toLocal().toString().split('.').first ?? incident.createdAt}',
+                        maxLines: 3,
+                      ),
+                      isThreeLine: true,
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => widget.onTrack(incident.id),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
 
 class TrackingScreen extends StatefulWidget { final String id; const TrackingScreen({super.key, required this.id}); @override State<TrackingScreen> createState() => _TrackingScreenState(); }
 class _TrackingScreenState extends State<TrackingScreen> { late Future<Incident?> future; @override void initState() { super.initState(); future = AppDatabase.instance.incidentById(widget.id); } @override Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('Incident tracking')), body: FutureBuilder<Incident?>(future: future, builder: (context, snap) { if (widget.id.isEmpty) return const Center(child: Text('Open the Incidents tab to select a saved report.')); if (snap.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator()); final i = snap.data; if (i == null) return const Center(child: Text('Incident not found on this device.')); return ListView(padding: const EdgeInsets.all(18), children: [Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Icon(Icons.track_changes, size: 40, color: blue), const SizedBox(height: 12), const Text('REFERENCE NUMBER', style: TextStyle(color: Colors.black54)), SelectableText(i.id, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20, color: navy)), const Divider(height: 28), _DetailLine('Category', i.category), _DetailLine('Type', i.emergencyType), _DetailLine('Status', i.status), _DetailLine('Priority', i.priority), _DetailLine('Description', i.description), _DetailLine('Created', DateTime.tryParse(i.createdAt)?.toLocal().toString().split('.').first ?? i.createdAt), _DetailLine('Contact', i.contactName.isEmpty ? 'Not provided' : i.contactName), if (i.latitude != null && i.longitude != null) _DetailLine('GPS', '${i.latitude}, ${i.longitude}'), if (i.latitude != null && i.longitude != null) FilledButton.icon(onPressed: () => _openMap(i.latitude!, i.longitude!), icon: const Icon(Icons.map), label: const Text('Open location in Google Maps')), const SizedBox(height: 12), const Text('Status is stored locally in this prototype. It does not indicate that a responder has received or acknowledged the alert.', style: TextStyle(color: Colors.redAccent, fontSize: 12))])))]); })) ; }
 class _DetailLine extends StatelessWidget { final String label, value; const _DetailLine(this.label, this.value); @override Widget build(BuildContext context) => Padding(padding: const EdgeInsets.symmetric(vertical: 6), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [SizedBox(width: 100, child: Text(label, style: const TextStyle(color: Colors.black54))), Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w600)))])); }
 
-class RespondersScreen extends StatelessWidget { const RespondersScreen({super.key}); @override Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('Emergency contacts')), body: FutureBuilder<List<Map<String, Object?>>>(future: AppDatabase.instance.responders(), builder: (context, snap) { if (!snap.hasData) return const Center(child: CircularProgressIndicator()); return ListView(padding: const EdgeInsets.all(12), children: [const Card(child: Padding(padding: EdgeInsets.all(14), child: Text('These are default emergency contact entries, not live verified responders. Call only if appropriate for your situation.', style: TextStyle(color: Colors.black54)))), ...snap.data!.map((r) => Card(child: ListTile(leading: const CircleAvatar(child: Icon(Icons.health_and_safety)), title: Text(r['name'] as String), subtitle: Text('${r['role']} • ${r['available'] == 1 ? 'Listed as available' : 'Unavailable'}\n${r['phone']}'), isThreeLine: true, trailing: IconButton(icon: const Icon(Icons.call, color: Colors.green), onPressed: () => _call(r['phone'] as String))))), Card(child: ListTile(leading: const Icon(Icons.info_outline), title: const Text('India emergency response'), subtitle: const Text('112'), trailing: FilledButton(onPressed: () => _call('112'), child: const Text('Call')))]); })) ; } }
+class RespondersScreen extends StatelessWidget {
+  const RespondersScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Emergency contacts')),
+      body: FutureBuilder<List<Map<String, Object?>>>(
+        future: AppDatabase.instance.responders(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Could not load contacts: ${snapshot.error}'));
+          }
+          final responders = snapshot.data ?? <Map<String, Object?>>[];
+          return ListView(
+            padding: const EdgeInsets.all(12),
+            children: [
+              const Card(
+                child: Padding(
+                  padding: EdgeInsets.all(14),
+                  child: Text(
+                    'These are default emergency contact entries, not live verified responders. Call only if appropriate for your situation.',
+                    style: TextStyle(color: Colors.black54),
+                  ),
+                ),
+              ),
+              ...responders.map(
+                (responder) => Card(
+                  child: ListTile(
+                    leading: const CircleAvatar(
+                      child: Icon(Icons.health_and_safety),
+                    ),
+                    title: Text(responder['name'] as String? ?? 'Contact'),
+                    subtitle: Text(
+                      '${responder['role'] ?? 'Contact'} • ${responder['available'] == 1 ? 'Listed as available' : 'Unavailable'}\n${responder['phone'] ?? ''}',
+                    ),
+                    isThreeLine: true,
+                    trailing: IconButton(
+                      icon: const Icon(Icons.call, color: Colors.green),
+                      onPressed: () => _call(responder['phone'] as String? ?? ''),
+                    ),
+                  ),
+                ),
+              ),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.info_outline),
+                  title: const Text('India emergency response'),
+                  subtitle: const Text('112'),
+                  trailing: FilledButton(
+                    onPressed: () => _call('112'),
+                    child: const Text('Call'),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
 
 class MapScreen extends StatefulWidget { const MapScreen({super.key}); @override State<MapScreen> createState() => _MapScreenState(); }
 class _MapScreenState extends State<MapScreen> { Position? pos; bool loading = false; Future<void> locate() async { setState(() => loading = true); try { if (!await Geolocator.isLocationServiceEnabled()) throw Exception('Location service is turned off.'); var p = await Geolocator.checkPermission(); if (p == LocationPermission.denied) p = await Geolocator.requestPermission(); if (p == LocationPermission.denied || p == LocationPermission.deniedForever) throw Exception('Location permission denied.'); pos = await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, timeLimit: Duration(seconds: 15))); } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', '')))); } finally { if (mounted) setState(() => loading = false); } } @override Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('Location & map')), body: ListView(padding: const EdgeInsets.all(18), children: [Container(height: 170, decoration: BoxDecoration(color: const Color(0xFFDCEAF8), borderRadius: BorderRadius.circular(18)), child: const Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.map, size: 58, color: navy), SizedBox(height: 8), Text('Map opens through Google Maps', style: TextStyle(fontWeight: FontWeight.bold, color: navy)), Text('No map API key is required for this link-based view.', style: TextStyle(fontSize: 12))])), const SizedBox(height: 16), FilledButton.icon(onPressed: loading ? null : locate, icon: const Icon(Icons.my_location), label: Text(loading ? 'Getting location…' : 'Get current location')), if (pos != null) Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Current coordinates', style: TextStyle(fontWeight: FontWeight.bold)), SelectableText('${pos!.latitude}, ${pos!.longitude}'), const SizedBox(height: 10), FilledButton.icon(onPressed: () => _openMap(pos!.latitude, pos!.longitude), icon: const Icon(Icons.open_in_new), label: const Text('Open in Google Maps'))]))), const SizedBox(height: 12), const Text('GPS requires device location to be enabled and permission to be granted. This page does not show live responder positions.', style: TextStyle(color: Colors.black54, fontSize: 12))])); }
