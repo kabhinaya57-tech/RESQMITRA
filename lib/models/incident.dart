@@ -11,17 +11,19 @@ class Incident {
   final String priority;
   final String createdAt;
   final String userEmail;
+  final bool doNotCall;
+  final String bloodGroup;
 
   const Incident({required this.id, required this.category, required this.emergencyType,
     required this.description, required this.contactName, required this.contactPhone,
     this.latitude, this.longitude, required this.status, required this.priority,
-    required this.createdAt, required this.userEmail});
+    required this.createdAt, required this.userEmail, this.doNotCall = false, this.bloodGroup = ''});
 
   Map<String, Object?> toMap() => {
     'id': id, 'category': category, 'emergencyType': emergencyType,
     'description': description, 'contactName': contactName, 'contactPhone': contactPhone,
     'latitude': latitude, 'longitude': longitude, 'status': status,
-    'priority': priority, 'createdAt': createdAt, 'userEmail': userEmail,
+    'priority': priority, 'createdAt': createdAt, 'userEmail': userEmail, 'doNotCall': doNotCall ? 1 : 0, 'bloodGroup': bloodGroup.isEmpty ? null : bloodGroup,
   };
 
   factory Incident.fromMap(Map<String, Object?> map) => Incident(
@@ -34,5 +36,7 @@ class Incident {
     longitude: map['longitude'] == null ? null : (map['longitude'] as num).toDouble(),
     status: map['status'] as String, priority: map['priority'] as String,
     createdAt: map['createdAt'] as String, userEmail: (map['userEmail'] ?? '') as String,
+    doNotCall: map['doNotCall'] == true || (map['doNotCall'] is num && (map['doNotCall'] as num).toInt() == 1),
+    bloodGroup: (map['bloodGroup'] ?? '') as String,
   );
 }

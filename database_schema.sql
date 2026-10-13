@@ -11,11 +11,14 @@ CREATE TABLE incidents (
   status TEXT NOT NULL,
   priority TEXT NOT NULL,
   createdAt TEXT NOT NULL,
-  userEmail TEXT NOT NULL
+  userEmail TEXT NOT NULL,
+  doNotCall INTEGER NOT NULL DEFAULT 0,
+  bloodGroup TEXT
 );
 CREATE TABLE users (
   email TEXT PRIMARY KEY,
   name TEXT NOT NULL,
+  phone TEXT NOT NULL DEFAULT '',
   passwordHash TEXT NOT NULL,
   createdAt TEXT NOT NULL
 );

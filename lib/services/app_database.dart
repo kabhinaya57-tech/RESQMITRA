@@ -14,15 +14,26 @@ class AppDatabase {
   Future<Database> get database async {
     if (_db != null) return _db!;
     final base = await getDatabasesPath();
-    _db = await openDatabase(p.join(base, 'pratham_raksha.db'), version: 1,
+    _db = await openDatabase(p.join(base, 'pratham_raksha.db'), version: 4,
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute("ALTER TABLE users ADD COLUMN phone TEXT NOT NULL DEFAULT ''");
+        }
+        if (oldVersion < 3) {
+          await db.execute("ALTER TABLE incidents ADD COLUMN doNotCall INTEGER NOT NULL DEFAULT 0");
+        }
+        if (oldVersion < 4) {
+          await db.execute("ALTER TABLE incidents ADD COLUMN bloodGroup TEXT");
+        }
+      },
       onCreate: (db, version) async {
         await db.execute('''CREATE TABLE incidents(
           id TEXT PRIMARY KEY, category TEXT NOT NULL, emergencyType TEXT NOT NULL,
           description TEXT NOT NULL, contactName TEXT NOT NULL, contactPhone TEXT NOT NULL,
           latitude REAL, longitude REAL, status TEXT NOT NULL, priority TEXT NOT NULL,
-          createdAt TEXT NOT NULL, userEmail TEXT NOT NULL)''');
+          createdAt TEXT NOT NULL, userEmail TEXT NOT NULL, doNotCall INTEGER NOT NULL DEFAULT 0, bloodGroup TEXT)''');
         await db.execute('''CREATE TABLE users(
-          email TEXT PRIMARY KEY, name TEXT NOT NULL, passwordHash TEXT NOT NULL, createdAt TEXT NOT NULL)''');
+          email TEXT PRIMARY KEY, name TEXT NOT NULL, phone TEXT NOT NULL DEFAULT '', passwordHash TEXT NOT NULL, createdAt TEXT NOT NULL)''');
         await db.execute('''CREATE TABLE responders(
           id TEXT PRIMARY KEY, name TEXT NOT NULL, role TEXT NOT NULL, phone TEXT NOT NULL, available INTEGER NOT NULL)''');
         await db.insert('responders', {'id':'R-101','name':'Emergency Medical Services','role':'Ambulance / Medical','phone':'112','available':1});
@@ -34,15 +45,15 @@ class AppDatabase {
 
   String _hash(String value) => sha256.convert(utf8.encode(value)).toString();
 
-  Future<String?> register({required String name, required String email, required String password}) async {
+  Future<String?> register({required String name, required String phone, required String email, required String password}) async {
     final db = await database;
     final normalized = email.trim().toLowerCase();
-    if (name.trim().isEmpty || !normalized.contains('@') || password.length < 8) {
-      return 'Enter a name, valid email, and password of at least 8 characters.';
+    if (name.trim().isEmpty || phone.trim().length < 7 || !normalized.contains('@') || password.length < 8) {
+      return 'Enter a name, valid phone number, valid email, and password of at least 8 characters.';
     }
     final existing = await db.query('users', where: 'email = ?', whereArgs: [normalized]);
     if (existing.isNotEmpty) return 'An account with this email already exists.';
-    await db.insert('users', {'email': normalized, 'name': name.trim(), 'passwordHash': _hash(password), 'createdAt': DateTime.now().toIso8601String()});
+    await db.insert('users', {'email': normalized, 'name': name.trim(), 'phone': phone.trim(), 'passwordHash': _hash(password), 'createdAt': DateTime.now().toIso8601String()});
     return null;
   }
 
@@ -54,13 +65,13 @@ class AppDatabase {
 
   Future<String> createIncident({required String category, required String emergencyType,
     required String description, required String contactName, required String contactPhone,
-    double? latitude, double? longitude, required String userEmail}) async {
+    double? latitude, double? longitude, required String userEmail, bool doNotCall = false, String bloodGroup = '') async {
     final db = await database;
     final id = 'PR-${DateTime.now().year}-${_uuid.v4().substring(0, 8).toUpperCase()}';
     await db.insert('incidents', Incident(id: id, category: category, emergencyType: emergencyType,
       description: description, contactName: contactName, contactPhone: contactPhone,
       latitude: latitude, longitude: longitude, status: 'Created', priority: 'High',
-      createdAt: DateTime.now().toIso8601String(), userEmail: userEmail).toMap());
+      createdAt: DateTime.now().toIso8601String(), userEmail: userEmail, doNotCall: doNotCall, bloodGroup: bloodGroup).toMap());
     return id;
   }
 

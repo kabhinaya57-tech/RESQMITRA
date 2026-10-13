@@ -1,5 +1,5 @@
-name: resq_mitra
-description: RESQ-MITRA emergency assistance and responder system prototype
+name: pratham_raksha
+description: PRATHAM-RAKSHA emergency assistance mobile app prototype
 publish_to: 'none'
 version: 1.0.0+1
 environment:
@@ -14,6 +14,7 @@ dependencies:
   url_launcher: ^6.3.1
   crypto: ^3.0.6
   uuid: ^4.5.1
+  shared_preferences: ^2.3.3
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -22,4 +23,4 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/resq_mitra_logo.png
+    - assets/pratham_raksha_logo.png

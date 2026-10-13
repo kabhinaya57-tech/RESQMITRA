@@ -1,6 +1,6 @@
-# RESQ-MITRA Flutter conversion
+# RESQ-MITRA Flutter app
 
-This is a Flutter/Dart starter conversion of the React/TypeScript source supplied in the ZIP. It includes the main home screen, General SOS and Women SOS forms, local incident dashboard and tracking, contacts, GPS capture, Google Maps deep links, local registration/login prototype, SQLite storage, and JSON backup/import.
+This is a Flutter/Dart starter conversion of the React/TypeScript source supplied in the ZIP. It includes the logo splash screen with running “HELP | PROTECT | SUPPORT | TOGETHER” tagline, persistent local sign-in, help-seeker/volunteer role selection, blinking SOS home screen with General SOS, Women SOS and Child SOS forms, local incident dashboard and tracking, contacts, GPS capture, Google Maps deep links, local registration/login prototype (name, phone, email, password), SQLite storage, and JSON backup/import.
 
 ## Important limits
 
@@ -48,12 +48,12 @@ The APK is normally generated at `build/app/outputs/flutter-apk/app-release.apk`
 
 ## Database
 
-SQLite database name: `resq_mitra.db`
+SQLite database name: `pratham_raksha.db`
 
 Tables:
 
 - `incidents`: incident ID, category, emergency type, description, contact information, optional coordinates, status, priority, created timestamp and user email.
-- `users`: local prototype account email, name, password hash and creation timestamp.
+- `users`: local prototype account email, name, phone, password hash and creation timestamp.
 - `responders`: default contact records.
 
 The schema is created by `lib/services/app_database.dart` on first launch. App data is local to the device and can be cleared by uninstalling the app or clearing app storage.
@@ -90,9 +90,24 @@ Export produces a versioned JSON object with `schemaVersion`, `exportedAt`, `inc
 
 The `IncidentsScreen` and `RespondersScreen` implementations were reformatted and their mismatched parentheses/braces corrected after a release build reported Dart syntax errors. Run `flutter pub get` and `flutter build apk --release` again. This environment does not have the Flutter SDK installed, so the corrected source has not been compiled here.
 
+## SOS emergency types
 
-## RESQ-MITRA branding update
-The home screen now uses the RESQ-MITRA name and the supplied logo asset at
-`assets/resq_mitra_logo.png`. The SOS entry point offers General, Women, and
-Children categories. Existing prototype limitations remain: reports are stored
-locally and are not automatically dispatched to emergency services or live responders.
+The SOS report form provides category-specific emergency types:
+
+- **General SOS:** Medical emergency, Accident, Fire, Flood, Rescue, Evacuation, Missing person, Other.
+- **Women SOS:** Immediate danger, Harassment, Unsafe situation, Escort assistance, Medical emergency, Safe shelter, Others.
+- **Child SOS:** Child in Immediate danger, Missing child, Medical emergency, Lost child, Child abuse or threat, Unsafe situation, Rescue assistance, Others.
+
+Every SOS report includes a required description field. For **Other/Others**, the field is labelled to request an explanation. The selected emergency type is saved in `incidents.emergencyType`; the user's explanation is saved in `incidents.description` in the existing SQLite database, so no additional database column or migration is needed.
+
+
+## Emergency confirmation and DO NOT CALL
+
+The SOS form now leads to an emergency confirmation screen with category, selected emergency type, description, GPS location when available, and a **DO NOT CALL** checkbox. Confirming saves the preference in the `incidents.doNotCall` SQLite field and shows it in incident tracking. SQLite database version 3 adds this field with a migration for existing installations.
+
+**Dispatch limitation:** this is still a local prototype. The confirmation screen does not send a network signal or notify nearby responders. A real responder notification flow requires a secure backend, responder accounts/location/availability, push notifications, and delivery/acknowledgement handling. The DO NOT CALL preference is stored locally and cannot yet control external responders or call systems.
+
+
+## Blood-needed SOS
+
+General SOS includes a **Blood needed** emergency type. When selected, the form asks for one of the eight blood groups (A+, A-, B+, B-, AB+, AB-, O+, O-). The selected blood group is stored in the incident `bloodGroup` SQLite column and displayed on the emergency confirmation and incident tracking screens. Existing databases migrate to schema version 4 automatically.
