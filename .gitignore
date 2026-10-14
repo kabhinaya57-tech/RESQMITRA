@@ -1,0 +1,22 @@
+# Flutter/Dart
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+
+# Android signing/local configuration
+android/local.properties
+android/key.properties
+*.jks
+*.keystore
+
+# Firebase secrets/config generated for local development (review before committing)
+lib/firebase_options.dart
