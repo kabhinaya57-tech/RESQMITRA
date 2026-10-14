@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "exportedAt": "2026-10-12T10:00:00.000Z",
+  "incidents": [
+    {
+      "id": "PR-2026-EXAMPLE01",
+      "category": "General",
+      "emergencyType": "Medical emergency",
+      "description": "Example only - not a real incident",
+      "contactName": "",
+      "contactPhone": "",
+      "latitude": null,
+      "longitude": null,
+      "status": "Created",
+      "priority": "High",
+      "createdAt": "2026-10-12T10:00:00.000Z",
+      "userEmail": ""
+    }
+  ],
+  "responders": [],
+  "users": []
+}
