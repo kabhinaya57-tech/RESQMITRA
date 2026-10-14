@@ -1,113 +1,88 @@
-# RESQ-MITRA Flutter app
+# RESQ-MITRA Flutter starter
 
-This is a Flutter/Dart starter conversion of the React/TypeScript source supplied in the ZIP. It includes the logo splash screen with running “HELP | PROTECT | SUPPORT | TOGETHER” tagline, persistent local sign-in, help-seeker/volunteer role selection, blinking SOS home screen with General SOS, Women SOS and Child SOS forms, local incident dashboard and tracking, contacts, GPS capture, Google Maps deep links, local registration/login prototype (name, phone, email, password), SQLite storage, and JSON backup/import.
+**Tagline:** BE FIRST TO RESPOND
 
-## Important limits
+This project converts the supplied RESQ-MITRA specification into a Flutter starter application. It includes the animated splash screen with your supplied logo, the branded sign-in/create-account UI, emergency category dashboard, role selection, emergency details, GPS permission flow, Firebase authentication hooks, Firestore emergency-record creation, and a status screen.
 
-- This is a functional **local prototype**, not a live emergency dispatch system.
-- SOS reports are saved only in the app's local SQLite database. They are not automatically sent to police, ambulance services, contacts, or a remote response team.
-- The responder entries are default emergency contact entries, not verified live responders.
-- Local login is for prototype testing only. Do not deploy it for public users. Replace it with Firebase Authentication or another secure server-backed identity provider.
-- Password hashes are stored locally for the prototype. JSON export deliberately excludes password hashes.
-- JSON export is displayed in the app so it can be copied; import accepts incident records from that exported JSON structure. It does not sync devices.
-- Google Maps opens using a web link; a native embedded map and live responder tracking are not included.
+## Important limitation
 
-## Generate Android/iOS platform folders
+This is a starter implementation, **not a production-ready emergency response service**. The source prompt ends partway through the active emergency screen specification. This code implements a safe foundation from the available requirements. It does not yet implement responder matching, push-alert distribution, responder verification, live responder tracking, arrival/resolution workflow, ratings, or a trusted server-side authorization layer. Do not rely on it for real emergencies until those systems are implemented and independently tested.
 
-Install Flutter and Android Studio, extract this folder, open a terminal in it, then run:
+The supplied original RESQ-MITRA logo is included at `assets/images/resq_mitra_logo.jpeg` and used on the splash, authentication, and home screens.
+
+## Requirements
+
+- Flutter SDK (stable)
+- Android Studio / Android SDK or VS Code with Flutter extension
+- A Firebase project for real authentication and database writes
+
+## Run
+
+1. Extract the ZIP.
+2. Open the `resq_mitra_flutter` folder in VS Code.
+3. In a terminal, run:
+
+   ```bash
+   flutter doctor
+   flutter pub get
+   ```
+
+4. Configure Firebase for your app:
+
+   ```bash
+   dart pub global activate flutterfire_cli
+   flutterfire configure
+   ```
+
+   Ensure the generated Firebase options are initialized according to the FlutterFire setup for your project. This starter currently calls `Firebase.initializeApp()` with platform defaults; depending on your project setup, you may need to use the generated `DefaultFirebaseOptions.currentPlatform` import in `lib/main.dart`.
+
+5. Configure Firebase Authentication (Email/Password) and Cloud Firestore in the Firebase console.
+6. Set up Android location permissions in `android/app/src/main/AndroidManifest.xml`:
+
+   ```xml
+   <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+   <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+   ```
+
+7. Run:
+
+   ```bash
+   flutter run
+   ```
+
+## Backend setup checklist
+
+Before accepting real SOS requests:
+
+- Configure Firestore security rules so users can create/read only authorized records.
+- Prefer a trusted backend / Cloud Functions for validation, unique status transitions, eligible-responder selection, transactional assignment, and push notifications.
+- Never allow clients to mark themselves verified responders.
+- Implement server-side distance and category eligibility checks using verified responder status, service area, availability, and recent location.
+- Add FCM token registration and server-triggered emergency notifications.
+- Test failed network requests, duplicate taps, expired sessions, denied location, stale GPS, and unauthorized access.
+- Add audit logging without recording passwords or unnecessary personal information.
+- Add a clearly tested fallback procedure and emergency-service guidance.
+
+## Firestore collection starting points
+
+- `users/{uid}`: public profile fields and selected role; do not store passwords.
+- `responders/{uid}`: verification status, skills, eligibility, availability, service area, and consent-based location.
+- `emergencies/{sosId}`: emergency request and status.
+- `assignments/{assignmentId}`: responder assignment lifecycle.
+
+Do not deploy open Firestore rules such as `allow read, write: if true`.
+
+
+## Build an APK using GitHub Actions (no local Flutter install needed)
+
+This starter includes `.github/workflows/build-apk.yml`. Commit and push the project to the `main` branch, then open your GitHub repository and go to **Actions → Build RESQ-MITRA APK**. Open the successful workflow run and download the `RESQ-MITRA-release-apk` artifact. Extract it to get `app-release.apk`.
+
+To commit a downloaded APK into the repository from Git Bash, copy it to the repository folder (for example, `release/app-release.apk`) and run:
 
 ```bash
-flutter doctor
-flutter create --platforms=android,ios .
-flutter pub get
+git add release/app-release.apk
+git commit -m "Add RESQ-MITRA release APK"
+git push origin main
 ```
 
-If `flutter create` says it will overwrite files, keep the existing `lib/` and `pubspec.yaml`. On a Windows PC, Android builds are supported; iOS builds require macOS and Xcode.
-
-## Android location permissions
-
-Open `android/app/src/main/AndroidManifest.xml` and add these lines inside the root `<manifest>` element and before `<application>`:
-
-```xml
-<uses-permission android:name="android.permission.INTERNET" />
-<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-```
-
-The app requests location permission when the user taps the location button. It does not request background location.
-
-## Run and build
-
-```bash
-flutter pub get
-flutter run
-flutter build apk --release
-```
-
-The APK is normally generated at `build/app/outputs/flutter-apk/app-release.apk` after a successful release build.
-
-## Database
-
-SQLite database name: `pratham_raksha.db`
-
-Tables:
-
-- `incidents`: incident ID, category, emergency type, description, contact information, optional coordinates, status, priority, created timestamp and user email.
-- `users`: local prototype account email, name, phone, password hash and creation timestamp.
-- `responders`: default contact records.
-
-The schema is created by `lib/services/app_database.dart` on first launch. App data is local to the device and can be cleared by uninstalling the app or clearing app storage.
-
-## JSON structure
-
-Export produces a versioned JSON object with `schemaVersion`, `exportedAt`, `incidents`, `responders`, and non-secret `users` fields. Example incident object:
-
-```json
-{
-  "id": "PR-2026-EXAMPLE01",
-  "category": "General",
-  "emergencyType": "Medical emergency",
-  "description": "Example report",
-  "contactName": "",
-  "contactPhone": "",
-  "latitude": null,
-  "longitude": null,
-  "status": "Created",
-  "priority": "High",
-  "createdAt": "2026-10-12T10:00:00.000Z",
-  "userEmail": ""
-}
-```
-
-## Main source files
-
-- `lib/main.dart`: Flutter UI and navigation
-- `lib/models/incident.dart`: incident model and JSON/map conversion
-- `lib/services/app_database.dart`: SQLite schema, local accounts, incident CRUD, responder records, JSON export/import
-
-
-## Build log fix (October 2026)
-
-The `IncidentsScreen` and `RespondersScreen` implementations were reformatted and their mismatched parentheses/braces corrected after a release build reported Dart syntax errors. Run `flutter pub get` and `flutter build apk --release` again. This environment does not have the Flutter SDK installed, so the corrected source has not been compiled here.
-
-## SOS emergency types
-
-The SOS report form provides category-specific emergency types:
-
-- **General SOS:** Medical emergency, Accident, Fire, Flood, Rescue, Evacuation, Missing person, Other.
-- **Women SOS:** Immediate danger, Harassment, Unsafe situation, Escort assistance, Medical emergency, Safe shelter, Others.
-- **Child SOS:** Child in Immediate danger, Missing child, Medical emergency, Lost child, Child abuse or threat, Unsafe situation, Rescue assistance, Others.
-
-Every SOS report includes a required description field. For **Other/Others**, the field is labelled to request an explanation. The selected emergency type is saved in `incidents.emergencyType`; the user's explanation is saved in `incidents.description` in the existing SQLite database, so no additional database column or migration is needed.
-
-
-## Emergency confirmation and DO NOT CALL
-
-The SOS form now leads to an emergency confirmation screen with category, selected emergency type, description, GPS location when available, and a **DO NOT CALL** checkbox. Confirming saves the preference in the `incidents.doNotCall` SQLite field and shows it in incident tracking. SQLite database version 3 adds this field with a migration for existing installations.
-
-**Dispatch limitation:** this is still a local prototype. The confirmation screen does not send a network signal or notify nearby responders. A real responder notification flow requires a secure backend, responder accounts/location/availability, push notifications, and delivery/acknowledgement handling. The DO NOT CALL preference is stored locally and cannot yet control external responders or call systems.
-
-
-## Blood-needed SOS
-
-General SOS includes a **Blood needed** emergency type. When selected, the form asks for one of the eight blood groups (A+, A-, B+, B-, AB+, AB-, O+, O-). The selected blood group is stored in the incident `bloodGroup` SQLite column and displayed on the emergency confirmation and incident tracking screens. Existing databases migrate to schema version 4 automatically.
+A GitHub Actions build is a convenient build path, but it does not configure Firebase, signing credentials, responder alert delivery, or production security. `flutter analyze` may expose source issues that need fixing before a successful APK is produced. For public distribution, use a proper release signing key and never commit the private keystore or passwords.
